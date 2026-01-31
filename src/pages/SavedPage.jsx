@@ -1,51 +1,119 @@
-
 // src/pages/SavedPage.jsx
-import { Heart, Star, MapPin, Clock, Trash2 } from 'lucide-react'
+import { Heart, Star, MapPin, Clock, Trash2, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import toast from 'react-hot-toast'
 
 export default function SavedPage() {
+  const { user, triggerLogin } = useAuth()
   const [savedItems, setSavedItems] = useState([
     {
       id: 1,
       title: 'Professional Hair Styling',
       provider: 'Alex Beauty Studio',
+      providerName: 'Alex Johnson',
       rating: 4.9,
       reviews: 127,
       price: 65,
       duration: '2 hours',
       distance: '1.2km',
       image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=300&fit=crop',
-      savedDate: '2 days ago'
+      savedDate: '2 days ago',
+      whatsapp: '+263783556354' // Zimbabwe number format
     },
     {
       id: 2,
       title: 'Deep Home Cleaning',
       provider: 'Sparkle Cleaners',
+      providerName: 'Sarah Williams',
       rating: 4.7,
       reviews: 89,
       price: 120,
       duration: '3 hours',
       distance: '2.5km',
       image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=300&fit=crop',
-      savedDate: '1 week ago'
+      savedDate: '1 week ago',
+      whatsapp: '+263783556354'
     },
     {
       id: 3,
       title: 'Personal Training Session',
       provider: 'FitPro Training',
+      providerName: 'Mike Trainer',
       rating: 4.8,
       reviews: 203,
       price: 45,
       duration: '1 hour',
       distance: '0.8km',
       image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop',
-      savedDate: '3 days ago'
+      savedDate: '3 days ago',
+      whatsapp: '+263783556354'
     },
   ])
 
   const handleRemove = (id) => {
     setSavedItems(prev => prev.filter(item => item.id !== id))
+    toast.success('Service removed from saved')
+  }
+
+  const handleWhatsAppBooking = (item) => {
+    if (!user) {
+      triggerLogin()
+      toast.error('Please login to contact providers')
+      return
+    }
+
+    // Normalize WhatsApp number
+    const normalizeWhatsAppNumber = (number) => {
+      if (!number) return null;
+      
+      // Remove all non-digit characters except +
+      let cleaned = number.replace(/[^\d+]/g, '');
+      
+      // If starts with +, keep it
+      if (cleaned.startsWith('+')) {
+        cleaned = cleaned.substring(1).replace(/^0+/, '');
+        return cleaned;
+      }
+      
+      // If starts with 0
+      if (cleaned.startsWith('0')) {
+        const defaultCountryCode = '263';
+        cleaned = defaultCountryCode + cleaned.substring(1);
+      }
+      
+      cleaned = cleaned.replace(/^0+/, '');
+      return cleaned;
+    }
+    
+    const normalizedNumber = normalizeWhatsAppNumber(item.whatsapp);
+    
+    if (!normalizedNumber) {
+      toast.error('WhatsApp number not available for this provider');
+      return;
+    }
+    
+    // Construct the enquiry message
+    const message = `👋 Hello *${item.providerName}*!
+    
+I'm interested in your service on Linka: *${item.title}* 🎯
+💰 Price: $${item.price}
+⏱️ Duration: ${item.duration}
+
+Can you please share more details about:
+📅 Your availability
+📋 Service requirements
+📝 Booking process
+
+My name is: 👤 ${user.name || user.email}
+Looking forward to your response! 😊`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${normalizedNumber}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
+    toast.success('Opening WhatsApp to contact provider');
   }
 
   return (
@@ -108,16 +176,17 @@ export default function SavedPage() {
                   <div className="flex space-x-3">
                     <Link
                       to={`/provider/${item.id}`}
-                      className="flex-1 btn-primary text-center"
+                      className="flex-1 btn-primary text-center py-3 rounded-xl"
                     >
                       View Details
                     </Link>
-                    <Link
-                      to={`/book/${item.id}`}
-                      className="flex-1 bg-white border border-primary-500 text-primary-600 hover:bg-primary-50 font-medium py-3 rounded-xl transition-colors text-center"
+                    <button
+                      onClick={() => handleWhatsAppBooking(item)}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded-xl transition-colors text-center flex items-center justify-center space-x-2"
                     >
-                      Book Now
-                    </Link>
+                      <MessageCircle className="w-5 h-5" />
+                      <span>Book via WhatsApp</span>
+                    </button>
                   </div>
                 </div>
               </div>
